@@ -6,7 +6,7 @@
 #include <time.h>
 #include <sys/resource.h>
 #define MAGIC "FaSTdEvL"
-#define DEBUG 1
+#define DEBUG 0
 
 /**
  * Stored in block 0 and its backup in block 1
