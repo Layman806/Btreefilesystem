@@ -1,7 +1,7 @@
 # Btreefilesystem
 A filesystem implemented using B+ trees for file/directory indexing.
 
-This is my first attempt at creating a filesystem of any kind. I came up with this code in a time span of approximately 1 week, so not many features exist. As for what exists, it works pretty well in common scenarios. There might be a bug in the find_parent function, so it might crash during some key promotion in some corner case. Use at your own discretion. But two level B+ tree is ensured to work, as per preliminary testing. Feel free to contribute by sending pull requests to try and fix the issue.
+This is my first attempt at creating a filesystem of any kind. I came up with this code in a time span of approximately 1 week, so not many features exist. As for what exists, it works pretty well in common scenarios. There might be a bug in the find_parent function, so it might crash during some key promotion in some corner case. Use at your own discretion. But two level B+ tree is ensured to work(max. 339\*339 files in a two level B+ tree), as per preliminary testing. Feel free to contribute by sending pull requests to try and fix the issue.
 
 Max. file size = 4GB + 4MB + 13 * 4KB, due to implementing direct, single indirect and double indirect blocks in 4KB bs.
 0th index element in the inode points to a stat file containing metadata on the file/directory and what kind of item this is: file or a folder. Stat files are not visible in the userspace.
