@@ -1350,10 +1350,10 @@ void ls(FILE *p, struct superblock *sb, int dir_id)
 		fseek(p, n.right, SEEK_SET);
 		fread(&n, sizeof(struct node), 1, p);
 
-/*		if (n.key[0].dir_id != dir_id){
+		if (n.key[0].dir_id != dir_id){
 			break;
 		}
-*/
+
 /*		if (n.key[n.size - 1].dir_id == dir_id) {
 			if (n.right == -1) {
 				break;
