@@ -6,6 +6,7 @@
 #include <time.h>
 #include <sys/resource.h>
 #define MAGIC "FaSTdEvL"
+#define BS 4096
 #define DEBUG 0
 
 /**
@@ -124,7 +125,6 @@ struct freeblock {
 	char f[4096];
 };
 
-void stack_buff();
 bool mount(FILE **, char[]);
 void makefs(FILE *);
 void setlabel(FILE *, char[]);
@@ -173,8 +173,6 @@ int main()
 	char label[8];
 	char t[25];
 
-//	stack_buff();
-
 	get_time(t);
 	strcpy(pwd, "/");
 	pwd_id = 1;
@@ -188,10 +186,10 @@ int main()
 	printf("\nDegree of B+ tree: 340");
 	printf("\n");
 	strcpy(name, "part1.img");
-	//	printf("\nEnter name of file in which psuedo partition is stored(without spaces): ");
+/*	printf("\nEnter name of file in which psuedo partition is stored(without spaces): ");
 
-	//	scanf("%255s", name);
-
+	scanf("%255s", name);
+*/
 	if (mount(&p, name) == false) {
 		printf("\nPartition mount failed. Maybe it is unformatted or file is corrupted.");
 		printf("\nMaybe try creating a partition or recovery options.\n");
@@ -233,7 +231,7 @@ int main()
 			fseek(p, 0, SEEK_SET);
 			fread(&sb, sizeof(struct superblock), 1, p);
 			debug_showroot(p, &sb);
-		} else if (strcmp(choice, "batch_create_files") == 0) {
+		} else if (strcmp(choice, "bcf") == 0) {
 			scanf("%d", &tmp);
 			fseek(p, 0, SEEK_SET);
 			fread(&sb, sizeof(struct superblock), 1, p);
@@ -567,7 +565,8 @@ void use_block(FILE *p, int i)
 
 	tmp = (a >> x) && 1;
 
-	printf("\nToggled block %d, byte %d, index %d, byte location: %d, to %d", b, m, x, loc, tmp);
+	if (DEBUG)
+		printf("\nToggled block %d, byte %d, index %d, byte location: %d, to %d", b, m, x, loc, tmp);
 
 	return;
 }
@@ -689,7 +688,8 @@ void insert(FILE *p, int id, int dir_id, int block, struct superblock *sb)
 		}
 
 		if (n.size < 339) {
-			printf("\nInside first condition.");
+			if (DEBUG)
+				printf("\nInside first condition.");
 			for (i = 0; i < n.size; ++i) {
 				if (comparator((void *)&k, (void *)&n.key[i]) < 0) {
 					break;
@@ -705,7 +705,8 @@ void insert(FILE *p, int id, int dir_id, int block, struct superblock *sb)
 			n.link[i] = block;
 			++n.size;
 
-			printf("\nIncremented size to %d", n.size);
+			if (DEBUG)
+				printf("\nIncremented size to %d", n.size);
 
 			fseek(p, curr, SEEK_SET);
 			fwrite(&n, sizeof(struct node), 1, p);
@@ -778,17 +779,37 @@ void insert(FILE *p, int id, int dir_id, int block, struct superblock *sb)
 				inorder(p, r);
 			}
 
-			tmp1.parent = promote(tmp2.key[0], tmp1.parent, l, r, p, sb);
+			tmp1.parent = promote(tmp2.key[0], n.parent, l, r, p, sb);
 			tmp2.parent = tmp1.parent;
 
-			//tmp1.parent = find_parent(tmp1.key[0], p, sb);
-			//tmp2.parent = find_parent(tmp2.key[0], p, sb);
-
+/*			tmp1.parent = find_parent(tmp1.key[0], p, sb);
+			tmp2.parent = find_parent(tmp2.key[0], p, sb);
+*/
+			tmp2.left = l;
+			tmp2.right = n.right;
 			fseek(p, r, SEEK_SET);
 			fwrite(&tmp2, sizeof(struct node), 1, p);
 
+			tmp1.left = n.left;
+			tmp1.right = r;
 			fseek(p, l, SEEK_SET);
 			fwrite(&tmp1, sizeof(struct node), 1, p);
+
+			if (n.left != -1) {
+				fseek(p, n.left, SEEK_SET);
+				fread(&tmp1, BS, 1, p);
+				tmp1.right = l;
+				fseek(p, n.left, SEEK_SET);
+				fwrite(&tmp1, BS, 1, p);
+			}
+
+			if (n.right != -1) {
+				fseek(p, n.right, SEEK_SET);
+				fread(&tmp2, BS, 1, p);
+				tmp2.left = r;
+				fseek(p, n.left, SEEK_SET);
+				fwrite(&tmp2, BS, 1, p);
+			}
 		}
 	}
 
@@ -800,7 +821,7 @@ void debug_show_filled_blocks(FILE *p)
 	int i;
 	struct superblock sb;
 
-	if (DEBUG == 0) {
+	if (!DEBUG) {
 		printf("Sorry, binary compiled as production, not debug. Set the DEBUG flag in source and compile to access the feature.");
 		return;
 	}
@@ -1044,9 +1065,9 @@ int promote(struct Key k, int parent, int l, int r, FILE *p, struct superblock *
 		tmp2.parent = tmp1.parent;
 
 		if (tmp1.parent == -1) {
-//			tmp1.parent = find_parent(tmp1.key[0], p, sb);
-//			tmp2.parent = find_parent(tmp2.key[0], p, sb);
-		}
+/*			tmp1.parent = find_parent(tmp1.key[0], p, sb);
+			tmp2.parent = find_parent(tmp2.key[0], p, sb);
+*/		}
 
 
 		fseek(p, L, SEEK_SET);
@@ -1191,7 +1212,8 @@ int new_empty_file_dir(FILE *p, struct superblock *sb, char name[], int dir_id, 
 
 	stat_loc *= 4096;
 
-	printf("\nStat Loc: %d, inode loc: %d", stat_loc, inode_loc);
+	if (DEBUG)
+		printf("\nStat Loc: %d, inode loc: %d", stat_loc, inode_loc);
 
 	in.f[0] = stat_loc;
 	in.f[1] = -1;
@@ -1227,7 +1249,8 @@ int new_empty_file_dir(FILE *p, struct superblock *sb, char name[], int dir_id, 
 
 		stat_loc *= 4096;
 
-		printf("\nStat Loc: %d, inode loc: %d", stat_loc, inode_loc);
+		if (DEBUG)
+			printf("\nStat Loc: %d, inode loc: %d", stat_loc, inode_loc);
 
 		in.f[0] = stat_loc;
 		in.f[1] = -1;
@@ -1304,6 +1327,7 @@ void ls(FILE *p, struct superblock *sb, int dir_id)
 		if (DEBUG) {
 			printf("\ndir_id: %d, n.size = %d, n.right = %d\n", n.key[0].dir_id, n.size, n.right);
 		}
+
 		for (i = 0; i < n.size; ++i) {
 			if (n.key[i].dir_id == dir_id) {
 				fseek(p, n.link[i], SEEK_SET);
@@ -1323,7 +1347,14 @@ void ls(FILE *p, struct superblock *sb, int dir_id)
 			break;
 		}
 
-		if (n.key[n.size - 1].dir_id == dir_id) {
+		fseek(p, n.right, SEEK_SET);
+		fread(&n, sizeof(struct node), 1, p);
+
+/*		if (n.key[0].dir_id != dir_id){
+			break;
+		}
+*/
+/*		if (n.key[n.size - 1].dir_id == dir_id) {
 			if (n.right == -1) {
 				break;
 			}
@@ -1332,7 +1363,7 @@ void ls(FILE *p, struct superblock *sb, int dir_id)
 		} else {
 			break;
 		}
-	}
+*/	}
 
 	return;
 }
@@ -1446,6 +1477,9 @@ void batch_create_files(FILE *p, struct superblock *sb, int n, int dir_id)
 
 void inorder(FILE *p, int root)
 {
+	int i;
+	struct node n;
+
 	if (!DEBUG) {
 		printf("\nNOT in debug mode!");
 
@@ -1455,9 +1489,6 @@ void inorder(FILE *p, int root)
 	if (root == -1) {
 		return;
 	}
-
-	int i;
-	struct node n;
 
 	fseek(p, root, SEEK_SET);
 	fread(&n, sizeof(struct node), 1, p);
@@ -1743,10 +1774,6 @@ void import(FILE *p, struct superblock *sb, char path[], int dir_id, char name[]
 
 void extract(FILE *p, struct superblock *sb, int dir_id, char *name, char *fname)
 {
-	if (DEBUG) {
-		printf("\nBefore declaration of variables");
-	}
-
 	FILE *f;
 	int i;
 	int j;
@@ -1757,10 +1784,15 @@ void extract(FILE *p, struct superblock *sb, int dir_id, char *name, char *fname
 	int blocks;
 	char block[4096];
 	struct inode in;
+	struct stat s;
+
+	if (DEBUG) {
+		printf("\nBefore declaration of variables");
+	}
+
 	if (DEBUG) {
 		printf("\nBefore declaring stat structure variable");
 	}
-	struct stat s;
 
 	if (DEBUG) {
 		printf("\nDeclared all variables for extraction");
@@ -1872,25 +1904,4 @@ void extract(FILE *p, struct superblock *sb, int dir_id, char *name, char *fname
 	fclose(f);
 
 	return;
-}
-
-void stack_buff()
-{
-    const rlim_t kStackSize = 16 * 1024 * 1024;
-    struct rlimit rl;
-    int result;
-
-    result = getrlimit(RLIMIT_STACK, &rl);
-    if (result == 0)
-    {
-        if (rl.rlim_cur < kStackSize)
-        {
-            rl.rlim_cur = kStackSize;
-            result = setrlimit(RLIMIT_STACK, &rl);
-            if (result != 0)
-            {
-                fprintf(stderr, "setrlimit returned result = %d\n", result);
-            }
-        }
-    }
 }
