@@ -6,7 +6,8 @@
 #include <time.h>
 #include <sys/resource.h>
 #define MAGIC "FaSTdEvL"
-#define DEBUG 0
+#define DEBUG 1
+#define BS 4096
 
 /**
  * Stored in block 0 and its backup in block 1
@@ -132,6 +133,7 @@ void preorder(int root, FILE *p)
 	fseek(p, root, SEEK_SET);
 	fread(&n, 4096, 1, p);
 
+	printf("n.size=%d ", n.size);
 	printf(" (");
 
 	for (i = 0; i < n.size; ++i) {
@@ -139,9 +141,10 @@ void preorder(int root, FILE *p)
 	}
 
 	printf(" ) ");
+	printf(", R: %d", n.right);
 
 	if (n.isLeaf == 1) {
-		printf("\n");
+		printf("\n\n");
 
 		return;
 	}
